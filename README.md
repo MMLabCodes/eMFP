@@ -55,62 +55,84 @@ This command will create a new Conda environment named `emfp` (as specified in t
 Although the `environment.yml` file has been tested on Ubuntu systems, package incompatibilities may occasionally arise. If you encounter issues installing the environment with Conda, it is recommended to manually check and resolve package compatibility conflicts one by one.
 
 
-
 ## Training
 
 Training is performed using two scripts:
 
-- `train_dnn.py`: for training models with Deep Neural Network model (`models.py`)
-- `train_other_models.py`: for training traditional machine learning models.
+- `train_cv_dnn_sys_external.py`: trains the Deep Neural Network (DNN) model.
+- `train_cv_skl_sys_external.py`: trains the traditional machine learning models (`RF`, `GBR`, `MLP`, and `KNR`).
 
-The available arguments for both scripts are listed below:
+Both scripts receive the same positional arguments:
 
-| Argument      | Type      | Possible values / Description                          | Required  | Default value     |
-|---------------|-----------|--------------------------------------------------------|-----------|-------------------|
-| `-file`       | string    | Name of the input file containing SMILES               | Mandatory | `None`            |
-| `-mfp`        | flag      | Use Morgan Fingerprint (does not require `-size`)      | Optional  | `False`           |
-| `-emfp`       | flag      | Use embedded MFP (requires `-size`)                    | Optional  | `False`           |
-| `-size`       | int       | Compression factor: `4`, `8`, `16`, `32`, `64`         | Optional  | `None`            |
-| `-none`       | flag      | No FFNN applied                                        | Optional  | `False`           |
-| `-linear`     | flag      | Linear FFNN                                            | Optional  | `False`           |
-| `-order`      | int       | FFNN order: `1`, `2`, `3`, ...  (requires `-linear`)   | Optional  | `1`               |
-| `-nB`         | int       | Number of bits for MFP: `1024`, `2048`, `4096`, ...    | Mandatory  | `16384`           |
-| `-rd`         | int       | Radius for MFP: `2`, `3`, `4`, `5`                      | Mandatory  | `2`               |
+| Position | Argument | Type | Possible values / Description | Default |
+|----------|----------|------|-------------------------------|---------|
+| 1 | `databaseName` | string | Dataset: `rdb`, `nfa`, `qm9` | `rdb` |
+| 2 | `encodingMethod` | string | Molecular encoding: `mfp`, `emfp` | `mfp` |
+| 3 | `embeddingSize` | int | `1` for MFP; `8`, `16`, `32`, `64`, `128`, `256` for eMFP | `1` |
+| 4 | `withDescriptors` | bool | `True` or `False` | `False` |
+| 5 | `ffnnCase` | string | `none`, `linear`, `gauss` | `none` |
+| 6 | `ffnnOrder` | int | FFNN order (`1`, `2`, `3`, ...) | `1` |
+| 7 | `nBitsMFP` | int | Number of Morgan fingerprint bits (`1024`, `2048`, `4096`, ..., `16384`, ...) | `16384` |
+| 8 | `radiusMFP` | int | Morgan fingerprint radius (`0`, `1`, `2`, `3`, `4`, ...) | `2` |
+| 9a | `modelName` | string | `RF`, `GBR`, `MLP`, `KNR` | `RF`, use with train_cv_skl_sys_external.py |
+| 9b | `modelName` | string | `DNN` | `DNN`, use with train_cv_dnn_sys_external.py |
+| 10 | `outterKFold` | int | Outer cross-validation fold (`1` to `5`) | `1` |
+| 11 | `int_ext_case` | string | `internal` or `external` | `internal` |
 
-### Additional argument for `train_other_models.py`:
+> **Note**
+>
+> The `int_ext_case` argument determines the execution mode:
+>
+> - `internal`: performs hyperparameter optimization (HPO) using Optuna.
+> - `external`: loads the Optuna `.db` database and trains the best model found in the stored trials.
 
-| Argument      | Type      | Possible values / Description                          | Required  | Default value     |
-|---------------|-----------|--------------------------------------------------------|-----------|-------------------|
-| `-model`      | string    | ML model to train: `RF`, `GBR`, `KNR`, `MLP`           | Mandatory  | `None`            |
-
-
-## Running Example
-
-### Example 1: Using Morgan Fingerprints (MFP) with Random Forest (RF)
-
-To run a calculation on the RedDB dataset with MFP and an RF model, use the following command:
-
-```bash
-python train_other_models.py -file Datasets/trainDb/clean_db_reddb.csv -mfp -linear -order 1 -nB 16384 -rd 2 -model RF
-```
-
+---
 
 ## Running Examples
-Running a example with same parameters by changing in the use of eMFP.
 
-### Example 1: Using Morgan Fingerprints (MFP) with Random Forest (RF)
+### Traditional Machine Learning Models (RF, GBR, MLP, KNR)
 
-To run a calculation on the RedDB dataset with MFP and an RF model, use the following command:
+Traditional machine learning models are trained using:
 
-```bash
-python train_other_models.py -file Datasets/trainDb/clean_db_reddb.csv -mfp -linear -order 1 -nB 16384 -rd 2 -model RF
+```text
+train_cv_skl_sys_external.py
 ```
 
-
-### Example 2: Using embedded Morgan Fingerprints (eMFP) with compression factor 64
-
-To run the same dataset using embedded MFP with a compression size of 64 and RF model:
+### Example 1: Morgan Fingerprints (MFP) with Random Forest (RF)
 
 ```bash
-python train_other_models.py -file Datasets/trainDb/clean_db_reddb.csv -emfp -size 64 -linear -order 1 -nB 16384 -rd 2 -model RF
+python train_cv_skl_sys_external.py rdb mfp 1 False linear 1 16384 2 RF 1 internal
 ```
+
+### Example 2: Embedded Morgan Fingerprints (eMFP) with compression size 64
+
+```bash
+python train_cv_skl_sys_external.py rdb emfp 64 False linear 1 16384 2 RF 1 internal
+```
+
+> **Note**
+>
+> Use `internal` to perform hyperparameter optimization with Optuna. Use `external` to load the corresponding Optuna `.db` file and train the best model obtained during the optimization.
+
+---
+
+## Running the Deep Neural Network (DNN)
+
+The DNN model is trained using:
+
+```text
+train_cv_dnn_sys_external.py
+```
+
+### Example
+
+```bash
+python train_cv_dnn_sys_external.py rdb emfp 64 False linear 1 16384 2 DNN 1 internal
+```
+
+> **Note**
+>
+> As with the traditional machine learning models:
+>
+> - `internal` performs hyperparameter optimization (HPO) using Optuna.
+> - `external` loads the Optuna `.db` file and trains the best DNN model found during the optimization trials.
