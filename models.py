@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class FSNN(nn.Module):
+class DNN(nn.Module):
     def __init__(self, input_dim, num_layers, neurons, scale_factor ):
-        super(FSNN, self).__init__()
+        super(DNN, self).__init__()
         
         layers = []
         current_units = neurons
